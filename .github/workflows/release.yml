@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_tag: ${{ steps.tag_version.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: false
+
+      - name: Create a GitHub release
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.tag_version.outputs.new_tag }}
+          CHANGELOG: ${{ steps.tag_version.outputs.changelog }}
+        run: |
+          gh release create "$NEW_TAG" \
+            --verify-tag \
+            --title "Release $NEW_TAG" \
+            --notes "$CHANGELOG"
+
+  publish-pypi:
+    needs: release
+    if: needs.release.outputs.new_tag != ''
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ needs.release.outputs.new_tag }}
+
+      - uses: hugoh/gh-workflows/setup@fe2707057b8da8fab2460fc1f0e816561fa8a958 # v1.3.0
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0

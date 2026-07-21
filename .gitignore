@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# uv
+.venv/
+
+# Config with real credentials
+config.toml
+
+# atvremote's own storage file, if run with cwd here (its default
+# --storage-filename is relative, not $HOME-based like pyatv's library
+# default) -- can contain real pairing credentials.
+.pyatv.conf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

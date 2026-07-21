@@ -1,0 +1,63 @@
+from __future__ import annotations
+
+import asyncio
+
+from fastapi import Depends, FastAPI, HTTPException
+from pyatv.const import PowerState
+
+from pyatv_http import atv
+from pyatv_http.atv import DeviceUnreachableError
+from pyatv_http.auth import require_token
+from pyatv_http.config import AppConfig
+
+
+def create_app(config: AppConfig) -> FastAPI:
+    app = FastAPI(dependencies=[Depends(require_token(config))])
+
+    def _get_device(name: str):
+        device = config.get_device(name)
+        if device is None:
+            raise HTTPException(status_code=404, detail=f"unknown device: {name}")
+        return device
+
+    async def _set_power_state(name: str, desired: PowerState) -> dict[str, str]:
+        device = _get_device(name)
+        loop = asyncio.get_running_loop()
+        try:
+            state = await atv.set_power_state(loop, device, desired)
+        except DeviceUnreachableError as exc:
+            raise HTTPException(status_code=504, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        return {"device": name, "power_state": state.name.lower()}
+
+    @app.post("/{name}/turnOn")
+    async def turn_on(name: str) -> dict[str, str]:
+        return await _set_power_state(name, PowerState.On)
+
+    @app.post("/{name}/turnOff")
+    async def turn_off(name: str) -> dict[str, str]:
+        return await _set_power_state(name, PowerState.Off)
+
+    @app.get("/{name}/powerState")
+    async def power_state(name: str) -> dict[str, str]:
+        device = _get_device(name)
+        loop = asyncio.get_running_loop()
+        try:
+            state = await atv.get_power_state(loop, device)
+        except DeviceUnreachableError as exc:
+            raise HTTPException(status_code=504, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        return {"device": name, "power_state": state.name.lower()}
+
+    @app.get("/devices")
+    async def list_devices() -> list[dict[str, str]]:
+        return [
+            {"device": device.key, "name": device.name}
+            for device in sorted(config.devices.values(), key=lambda d: d.key)
+        ]
+
+    return app
