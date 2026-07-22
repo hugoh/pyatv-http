@@ -5,9 +5,11 @@ An HTTP interface for controlling Apple TVs, built on top of
 
 ## Features
 
-- `POST /<name>/turnOn` and `POST /<name>/turnOff` — checks the Apple TV's current
-  power state and only sends a command if it differs from the desired state.
-- `GET /<name>/powerState` — reads the current power state without changing it.
+- `GET /<name>/power-state` — reads the current power state without changing it.
+- `PUT /<name>/power-state` (body `{"power_state": "on"}` or `{"power_state":
+  "off"}`) — checks the Apple TV's current power state and only sends a
+  command if it differs from the desired state. `POST` is also accepted as an
+  identical alias, for clients/platforms that can't issue `PUT` requests.
 - `GET /devices` — lists the devices available in the config file.
 - `GET /health` — unauthenticated liveness check, for load balancers/uptime
   monitors.
@@ -87,7 +89,7 @@ credentials = "..."
   request (see [API](#api) below). Generate one with e.g.
   `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.
 - The `[devices.<key>]` table key (`living_room` above) is the URL path
-  segment used in requests, e.g. `POST /living_room/turnOn`.
+  segment used in requests, e.g. `PUT /living_room/power-state`.
 - `identifier` — the device's main pyatv identifier (from `atvremote scan`).
 - `address` — the Apple TV's IP address or hostname; used to connect
   directly instead of relying on mDNS discovery at request time.
@@ -115,22 +117,42 @@ Every request must include one of the configured tokens as a bearer token:
 ```sh
 TOKEN=a-long-random-token
 
-curl -X POST http://localhost:8080/living_room/turnOn \
-  -H "Authorization: Bearer $TOKEN"
+curl -X PUT http://localhost:8080/living_room/power-state \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"power_state": "on"}'
 
-curl -X POST http://localhost:8080/living_room/turnOff \
-  -H "Authorization: Bearer $TOKEN"
+curl -X PUT http://localhost:8080/living_room/power-state \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"power_state": "off"}'
 
-curl http://localhost:8080/living_room/powerState \
+# POST is also accepted, identical to PUT, for clients that can only
+# issue GET/POST requests:
+curl -X POST http://localhost:8080/living_room/power-state \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"power_state": "on"}'
+
+curl http://localhost:8080/living_room/power-state \
   -H "Authorization: Bearer $TOKEN"
 
 curl http://localhost:8080/devices \
   -H "Authorization: Bearer $TOKEN"
 
 curl http://localhost:8080/health
+
+# Fallback for clients that can't set an Authorization header (see
+# "Limited HTTP clients" below): access_token in the query string for GET,
+# access_token as a JSON body field for POST. Not available for PUT.
+curl "http://localhost:8080/living_room/power-state?access_token=$TOKEN"
+
+curl -X POST http://localhost:8080/living_room/power-state \
+  -H "Content-Type: application/json" \
+  -d '{"power_state": "on", "access_token": "'"$TOKEN"'"}'
 ```
 
-`turnOn`/`turnOff`/`powerState` return a JSON body:
+`GET`/`PUT`/`POST /<name>/power-state` all return a JSON body:
 `{"device": "living_room", "power_state": "on"}`.
 
 `GET /devices` returns the devices available in the config file:
@@ -160,10 +182,44 @@ FastAPI auto-generates interactive documentation for the running server:
 
 These three routes are not themselves behind the bearer-token check.
 
+### Limited HTTP clients (e.g. Hubitat Rule Machine)
+
+A lot of home-automation "rule engine" style integrations — Hubitat's Rule
+Machine is the one that prompted this — can only fire `GET` and `POST`
+requests, and can't attach a custom `Authorization` header to them. Two
+things in this API exist specifically to accommodate that:
+
+1. **`POST` is a full alias for `PUT`** on `/<name>/power-state`. State
+   changes normally belong on `PUT` (it's idempotent and semantically
+   correct — "set this resource to this value"), but any client that can
+   only do `GET`/`POST` can use `POST` with the exact same body and get
+   identical behavior.
+2. **The bearer token can be passed in-band instead of as a header**, as a
+   fallback that's only checked when no valid `Authorization` header is
+   present. This follows [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750)
+   (OAuth 2.0 Bearer Token Usage) sections 2.2 and 2.3, which define
+   `access_token` as the parameter name for exactly this case:
+   - `GET` requests: `?access_token=...` query parameter.
+   - `POST` requests: `"access_token"` field in the JSON body, alongside
+     `power_state`.
+
+   This fallback is **deliberately not available on `PUT`** — `PUT` stays
+   the strict, header-only, "do it the correct way" method. If your client
+   can set a custom header, prefer `PUT` with an `Authorization` header;
+   the fallback exists only for clients that genuinely can't.
+
+**Security note:** a token in a URL or a JSON body is more likely to end up
+somewhere you don't want it — server access logs, browser history, an
+intermediate proxy's logs — than one in an `Authorization` header. Only rely
+on this fallback when pyatv-http is reachable exclusively on a trusted local
+network (the normal setup for a Hubitat hub talking to a LAN service, not
+something exposed to the internet), and consider using a token dedicated to
+that integration so it can be rotated on its own if it ever leaks.
+
 ## Notes
 
 - Each request opens a fresh connection to the Apple TV, checks its current
-  power state, and only sends `turnOn`/`turnOff` if it differs from the
+  power state, and only sends the power command if it differs from the
   desired state — there's no persistent connection or background polling.
 - Pairing is entirely out-of-band via `atvremote`; this project never
   performs the pairing handshake itself.

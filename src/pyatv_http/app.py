@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException
 from pyatv.const import PowerState
+from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -15,6 +17,14 @@ from pyatv_http.config import AppConfig
 
 async def _health(_request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
+
+
+class PowerStateRequest(BaseModel):
+    power_state: Literal["on", "off"]
+    # Auth fallback for POST-only clients, per RFC 6750 section 2.2;
+    # consumed by require_token's dependency, not by the route handler.
+    # Ignored on PUT (header required).
+    access_token: str | None = None
 
 
 def create_app(config: AppConfig) -> FastAPI:
@@ -43,16 +53,22 @@ def create_app(config: AppConfig) -> FastAPI:
 
         return {"device": name, "power_state": state.name.lower()}
 
-    @app.post("/{name}/turnOn")
-    async def turn_on(name: str) -> dict[str, str]:
-        return await _set_power_state(name, PowerState.On)
+    @app.put("/{name}/power-state")
+    @app.post("/{name}/power-state")
+    async def set_power_state_route(
+        name: str, body: PowerStateRequest
+    ) -> dict[str, str]:
+        desired = PowerState.On if body.power_state == "on" else PowerState.Off
+        return await _set_power_state(name, desired)
 
-    @app.post("/{name}/turnOff")
-    async def turn_off(name: str) -> dict[str, str]:
-        return await _set_power_state(name, PowerState.Off)
-
-    @app.get("/{name}/powerState")
-    async def power_state(name: str) -> dict[str, str]:
+    @app.get("/{name}/power-state")
+    async def power_state(
+        name: str,
+        # Auth fallback for GET-only clients, per RFC 6750 section 2.3;
+        # consumed by require_token's dependency, exposed here only for
+        # OpenAPI/Swagger visibility.
+        access_token: str | None = None,
+    ) -> dict[str, str]:
         device = _get_device(name)
         loop = asyncio.get_running_loop()
         try:

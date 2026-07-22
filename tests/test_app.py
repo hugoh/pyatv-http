@@ -52,12 +52,14 @@ async def unauthenticated_client():
         yield client
 
 
-async def test_turn_on_returns_power_state(client):
+async def test_put_power_state_on_returns_power_state(client):
     with patch(
         "pyatv_http.app.atv.set_power_state",
         new=AsyncMock(return_value=PowerState.On),
     ) as mock_set:
-        response = await client.post("/living_room/turnOn")
+        response = await client.put(
+            "/living_room/power-state", json={"power_state": "on"}
+        )
 
     assert response.status_code == 200
     assert response.json() == {"device": "living_room", "power_state": "on"}
@@ -65,12 +67,14 @@ async def test_turn_on_returns_power_state(client):
     assert mock_set.await_args.args[2] == PowerState.On
 
 
-async def test_turn_off_returns_power_state(client):
+async def test_put_power_state_off_returns_power_state(client):
     with patch(
         "pyatv_http.app.atv.set_power_state",
         new=AsyncMock(return_value=PowerState.Off),
     ) as mock_set:
-        response = await client.post("/living_room/turnOff")
+        response = await client.put(
+            "/living_room/power-state", json={"power_state": "off"}
+        )
 
     assert response.status_code == 200
     assert response.json() == {"device": "living_room", "power_state": "off"}
@@ -78,8 +82,23 @@ async def test_turn_off_returns_power_state(client):
     assert mock_set.await_args.args[2] == PowerState.Off
 
 
-async def test_turn_on_unknown_device_returns_404(client):
-    response = await client.post("/attic/turnOn")
+async def test_post_power_state_behaves_like_put(client):
+    with patch(
+        "pyatv_http.app.atv.set_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ) as mock_set:
+        response = await client.post(
+            "/living_room/power-state", json={"power_state": "on"}
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"device": "living_room", "power_state": "on"}
+    assert mock_set.await_args is not None
+    assert mock_set.await_args.args[2] == PowerState.On
+
+
+async def test_put_power_state_unknown_device_returns_404(client):
+    response = await client.put("/attic/power-state", json={"power_state": "on"})
 
     assert response.status_code == 404
 
@@ -89,7 +108,9 @@ async def test_unreachable_device_returns_504(client):
         "pyatv_http.app.atv.set_power_state",
         new=AsyncMock(side_effect=DeviceUnreachableError("nope")),
     ):
-        response = await client.post("/living_room/turnOn")
+        response = await client.put(
+            "/living_room/power-state", json={"power_state": "on"}
+        )
 
     assert response.status_code == 504
 
@@ -99,7 +120,9 @@ async def test_other_atv_error_returns_502(client):
         "pyatv_http.app.atv.set_power_state",
         new=AsyncMock(side_effect=RuntimeError("boom")),
     ):
-        response = await client.post("/living_room/turnOn")
+        response = await client.put(
+            "/living_room/power-state", json={"power_state": "on"}
+        )
 
     assert response.status_code == 502
 
@@ -109,7 +132,7 @@ async def test_get_power_state_returns_current_state(client):
         "pyatv_http.app.atv.get_power_state",
         new=AsyncMock(return_value=PowerState.On),
     ) as mock_get:
-        response = await client.get("/living_room/powerState")
+        response = await client.get("/living_room/power-state")
 
     assert response.status_code == 200
     assert response.json() == {"device": "living_room", "power_state": "on"}
@@ -117,7 +140,7 @@ async def test_get_power_state_returns_current_state(client):
 
 
 async def test_get_power_state_unknown_device_returns_404(client):
-    response = await client.get("/attic/powerState")
+    response = await client.get("/attic/power-state")
 
     assert response.status_code == 404
 
@@ -127,7 +150,7 @@ async def test_get_power_state_unreachable_returns_504(client):
         "pyatv_http.app.atv.get_power_state",
         new=AsyncMock(side_effect=DeviceUnreachableError("nope")),
     ):
-        response = await client.get("/living_room/powerState")
+        response = await client.get("/living_room/power-state")
 
     assert response.status_code == 504
 
@@ -150,7 +173,9 @@ async def test_health_returns_ok_without_token(unauthenticated_client):
 
 
 async def test_requests_without_token_are_rejected(unauthenticated_client):
-    response = await unauthenticated_client.post("/living_room/turnOn")
+    response = await unauthenticated_client.put(
+        "/living_room/power-state", json={"power_state": "on"}
+    )
 
     assert response.status_code == 401
 
@@ -162,14 +187,77 @@ async def test_devices_without_token_are_rejected(unauthenticated_client):
 
 
 async def test_power_state_without_token_are_rejected(unauthenticated_client):
-    response = await unauthenticated_client.get("/living_room/powerState")
+    response = await unauthenticated_client.get("/living_room/power-state")
 
     assert response.status_code == 401
 
 
 async def test_requests_with_wrong_token_are_rejected(unauthenticated_client):
+    response = await unauthenticated_client.put(
+        "/living_room/power-state",
+        json={"power_state": "on"},
+        headers={"Authorization": "Bearer wrong-token"},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_get_power_state_accepts_access_token_query_param(unauthenticated_client):
+    with patch(
+        "pyatv_http.app.atv.get_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ):
+        response = await unauthenticated_client.get(
+            "/living_room/power-state", params={"access_token": VALID_TOKEN}
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"device": "living_room", "power_state": "on"}
+
+
+async def test_get_power_state_rejects_wrong_access_token_query_param(
+    unauthenticated_client,
+):
+    response = await unauthenticated_client.get(
+        "/living_room/power-state", params={"access_token": "wrong-token"}
+    )
+
+    assert response.status_code == 401
+
+
+async def test_post_power_state_accepts_access_token_body_field(unauthenticated_client):
+    with patch(
+        "pyatv_http.app.atv.set_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ) as mock_set:
+        response = await unauthenticated_client.post(
+            "/living_room/power-state",
+            json={"power_state": "on", "access_token": VALID_TOKEN},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"device": "living_room", "power_state": "on"}
+    assert mock_set.await_args is not None
+    assert mock_set.await_args.args[2] == PowerState.On
+
+
+async def test_post_power_state_rejects_wrong_access_token_body_field(
+    unauthenticated_client,
+):
     response = await unauthenticated_client.post(
-        "/living_room/turnOn", headers={"Authorization": "Bearer wrong-token"}
+        "/living_room/power-state",
+        json={"power_state": "on", "access_token": "wrong-token"},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_put_power_state_does_not_accept_access_token_body_field(
+    unauthenticated_client,
+):
+    response = await unauthenticated_client.put(
+        "/living_room/power-state",
+        json={"power_state": "on", "access_token": VALID_TOKEN},
     )
 
     assert response.status_code == 401
