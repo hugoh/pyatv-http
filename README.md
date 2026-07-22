@@ -9,8 +9,10 @@ An HTTP interface for controlling Apple TVs, built on top of
   power state and only sends a command if it differs from the desired state.
 - `GET /<name>/powerState` — reads the current power state without changing it.
 - `GET /devices` — lists the devices available in the config file.
-- Every request requires a bearer token, configured as a list of accepted
-  tokens in the config file.
+- `GET /health` — unauthenticated liveness check, for load balancers/uptime
+  monitors.
+- Every other request requires a bearer token, configured as a list of
+  accepted tokens in the config file.
 - Config-driven: one TOML file lists the port to listen on, accepted API
   tokens, and the paired devices.
 - Pairing stays out-of-band, via pyatv's own `atvremote` CLI; a `pyatv-http gen-config`
@@ -124,6 +126,8 @@ curl http://localhost:8080/living_room/powerState \
 
 curl http://localhost:8080/devices \
   -H "Authorization: Bearer $TOKEN"
+
+curl http://localhost:8080/health
 ```
 
 `turnOn`/`turnOff`/`powerState` return a JSON body:
@@ -134,6 +138,8 @@ curl http://localhost:8080/devices \
 ```json
 [{"device": "living_room", "name": "Living Room"}]
 ```
+
+`GET /health` (no token required) returns `{"status": "ok"}`.
 
 | Status | Meaning                                                           |
 | ------ | ------------------------------------------------------------------ |

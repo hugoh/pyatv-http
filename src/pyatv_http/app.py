@@ -4,6 +4,8 @@ import asyncio
 
 from fastapi import Depends, FastAPI, HTTPException
 from pyatv.const import PowerState
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from pyatv_http import atv
 from pyatv_http.atv import DeviceUnreachableError
@@ -11,8 +13,17 @@ from pyatv_http.auth import require_token
 from pyatv_http.config import AppConfig
 
 
+async def _health(_request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
+
 def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(dependencies=[Depends(require_token(config))])
+
+    # Added as a raw Starlette route (like FastAPI's own /docs, /openapi.json)
+    # so it bypasses the app-wide bearer-token dependency above -- health
+    # probes (load balancers, uptime checks) shouldn't need a token.
+    app.add_route("/health", _health, methods=["GET"])
 
     def _get_device(name: str):
         device = config.get_device(name)

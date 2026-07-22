@@ -142,6 +142,13 @@ async def test_list_devices_returns_configured_devices(client):
     ]
 
 
+async def test_health_returns_ok_without_token(unauthenticated_client):
+    response = await unauthenticated_client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 async def test_requests_without_token_are_rejected(unauthenticated_client):
     response = await unauthenticated_client.post("/living_room/turnOn")
 
