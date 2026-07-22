@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import os
 import sys
 from pathlib import Path
 
 import uvicorn
 
+from pyatv_http import __version__
 from pyatv_http.app import create_app
 from pyatv_http.config import load_config
 from pyatv_http.gen_config import DeviceNotFoundError, generate_config_block
 
 DEFAULT_STORAGE_PATH = Path.home() / ".pyatv.conf"
+
+logger = logging.getLogger(__name__)
 
 
 def default_config_path() -> Path:
@@ -22,6 +26,8 @@ def default_config_path() -> Path:
 
 
 def _serve(args: argparse.Namespace) -> None:
+    logging.basicConfig(level=logging.INFO)
+    logger.info("pyatv-http %s starting up", __version__)
     config_path = args.config or default_config_path()
     config = load_config(config_path)
     app = create_app(config)

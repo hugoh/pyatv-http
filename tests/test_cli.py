@@ -1,6 +1,8 @@
+import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from pyatv_http import __version__
 from pyatv_http.cli import build_parser, default_config_path, main
 
 
@@ -18,6 +20,20 @@ def test_serve_subcommand_runs_uvicorn():
     mock_load.assert_called_once_with("config.toml")
     mock_create_app.assert_called_once_with(fake_config)
     mock_run.assert_called_once_with(fake_app, host="0.0.0.0", port=8080)
+
+
+def test_serve_logs_version_at_startup(caplog):
+    fake_config = MagicMock(port=8080)
+
+    with (
+        patch("pyatv_http.cli.load_config", return_value=fake_config),
+        patch("pyatv_http.cli.create_app", return_value=MagicMock()),
+        patch("pyatv_http.cli.uvicorn.run"),
+        caplog.at_level(logging.INFO, logger="pyatv_http.cli"),
+    ):
+        main(["serve", "--config", "config.toml"])
+
+    assert any(__version__ in record.message for record in caplog.records)
 
 
 def test_serve_uses_default_config_path_when_not_given():

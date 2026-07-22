@@ -9,14 +9,14 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from pyatv_http import atv
+from pyatv_http import __version__, atv
 from pyatv_http.atv import DeviceUnreachableError
 from pyatv_http.auth import require_token
 from pyatv_http.config import AppConfig
 
 
 async def _health(_request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok"})
+    return JSONResponse({"status": "ok", "version": __version__})
 
 
 class PowerStateRequest(BaseModel):
@@ -29,6 +29,12 @@ class PowerStateRequest(BaseModel):
 
 def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(dependencies=[Depends(require_token(config))])
+
+    @app.middleware("http")
+    async def _add_version_header(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["App-Version"] = __version__
+        return response
 
     # Added as a raw Starlette route (like FastAPI's own /docs, /openapi.json)
     # so it bypasses the app-wide bearer-token dependency above -- health

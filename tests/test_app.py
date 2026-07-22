@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pyatv.const import PowerState
 
+from pyatv_http import __version__
 from pyatv_http.app import create_app
 from pyatv_http.atv import DeviceUnreachableError
 from pyatv_http.config import AppConfig, DeviceConfig
@@ -169,7 +170,13 @@ async def test_health_returns_ok_without_token(unauthenticated_client):
     response = await unauthenticated_client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "ok", "version": __version__}
+
+
+async def test_response_includes_version_header(unauthenticated_client):
+    response = await unauthenticated_client.get("/health")
+
+    assert response.headers["App-Version"] == __version__
 
 
 async def test_requests_without_token_are_rejected(unauthenticated_client):
