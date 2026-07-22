@@ -75,10 +75,28 @@ def test_unknown_device_key_returns_none(tmp_path):
     assert config.get_device("bedroom") is None
 
 
-def test_missing_port_raises(tmp_path):
+def test_missing_port_defaults_to_8080(tmp_path):
     path = tmp_path / "config.toml"
     path.write_text(
         AUTH_BLOCK
+        + """
+[devices.living_room]
+name = "Living Room"
+identifier = "AA:BB:CC:DD:EE:FF"
+address = "10.0.0.5"
+"""
+    )
+
+    config = load_config(path)
+
+    assert config.port == 8080
+
+
+def test_invalid_port_raises(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text(
+        'port = "not-a-number"\n'
+        + AUTH_BLOCK
         + """
 [devices.living_room]
 name = "Living Room"

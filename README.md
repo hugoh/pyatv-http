@@ -82,7 +82,7 @@ identifier = "11:22:33:44:55:66"
 credentials = "..."
 ```
 
-- `port` — port the HTTP server listens on.
+- `port` — port the HTTP server listens on. Optional, defaults to `8080`.
 - `[auth].tokens` — required, non-empty list of bearer tokens accepted on every
   request (see [API](#api) below). Generate one with e.g.
   `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.

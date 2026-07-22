@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 KNOWN_PROTOCOLS = frozenset({"airplay", "companion", "dmap", "mrp", "raop"})
+DEFAULT_PORT = 8080
 
 
 class ConfigError(Exception):
@@ -97,9 +98,9 @@ def load_config(path: str | Path) -> AppConfig:
 
     data = tomllib.loads(path.read_text())
 
-    port = data.get("port")
+    port = data.get("port", DEFAULT_PORT)
     if not isinstance(port, int):
-        raise ConfigError("missing or invalid required field 'port'")
+        raise ConfigError("invalid field 'port': must be an integer")
 
     raw_devices = data.get("devices")
     if not raw_devices:
