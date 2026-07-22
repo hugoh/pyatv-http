@@ -1,14 +1,13 @@
 [project]
 name = "pyatv-http"
-dynamic = ["version"]
 description = "HTTP interface for controlling Apple TVs via pyatv"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   { name = "Hugo Haas" },
 ]
-readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
-requires-python = ">=3.12"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -19,33 +18,34 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Home Automation",
 ]
+dynamic = ["version"]
 
 dependencies = [
-  "pyatv>=0.16.0",
   "fastapi>=0.121.0",
+  "pyatv>=0.18.0",
   "uvicorn>=0.38.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/hugoh/pyatv-http"
-Repository = "https://github.com/hugoh/pyatv-http"
 Issues = "https://github.com/hugoh/pyatv-http/issues"
+Repository = "https://github.com/hugoh/pyatv-http"
 
 [project.scripts]
 pyatv-http = "pyatv_http.cli:main"
 
-[build-system]
-requires = ["hatchling", "hatch-vcs"]
-build-backend = "hatchling.build"
-
 [dependency-groups]
 dev = [
-  "ty>=0.0.57",
-  "ruff>=0.15.20",
+  "httpx>=0.28.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.3.0",
-  "httpx>=0.28.1",
+  "ruff>=0.15.20",
+  "ty>=0.0.57",
 ]
+
+[build-system]
+requires = ["hatch-vcs", "hatchling"]
+build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyatv_http"]
@@ -53,13 +53,13 @@ packages = ["src/pyatv_http"]
 [tool.hatch.version]
 source = "vcs"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"

@@ -172,6 +172,6 @@ These three routes are not themselves behind the bearer-token check.
 
 ```sh
 uv sync
-uv run pytest
+uv run pytest   # or: mise run test
 hk check --all
 ```
