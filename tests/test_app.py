@@ -200,3 +200,64 @@ async def test_requests_with_wrong_token_are_rejected(unauthenticated_client):
     )
 
     assert response.status_code == 401
+
+
+async def test_get_power_state_accepts_token_query_param(unauthenticated_client):
+    with patch(
+        "pyatv_http.app.atv.get_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ):
+        response = await unauthenticated_client.get(
+            "/living_room/power-state", params={"token": VALID_TOKEN}
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"device": "living_room", "power_state": "on"}
+
+
+async def test_get_power_state_rejects_wrong_token_query_param(
+    unauthenticated_client,
+):
+    response = await unauthenticated_client.get(
+        "/living_room/power-state", params={"token": "wrong-token"}
+    )
+
+    assert response.status_code == 401
+
+
+async def test_post_power_state_accepts_token_body_field(unauthenticated_client):
+    with patch(
+        "pyatv_http.app.atv.set_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ) as mock_set:
+        response = await unauthenticated_client.post(
+            "/living_room/power-state",
+            json={"power_state": "on", "token": VALID_TOKEN},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"device": "living_room", "power_state": "on"}
+    assert mock_set.await_args is not None
+    assert mock_set.await_args.args[2] == PowerState.On
+
+
+async def test_post_power_state_rejects_wrong_token_body_field(
+    unauthenticated_client,
+):
+    response = await unauthenticated_client.post(
+        "/living_room/power-state",
+        json={"power_state": "on", "token": "wrong-token"},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_put_power_state_does_not_accept_token_body_field(
+    unauthenticated_client,
+):
+    response = await unauthenticated_client.put(
+        "/living_room/power-state",
+        json={"power_state": "on", "token": VALID_TOKEN},
+    )
+
+    assert response.status_code == 401

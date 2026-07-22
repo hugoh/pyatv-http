@@ -21,6 +21,9 @@ async def _health(_request: Request) -> JSONResponse:
 
 class PowerStateRequest(BaseModel):
     power_state: Literal["on", "off"]
+    # Auth fallback for POST-only clients; consumed by require_token's
+    # dependency, not by the route handler. Ignored on PUT (header required).
+    token: str | None = None
 
 
 def create_app(config: AppConfig) -> FastAPI:
@@ -58,7 +61,12 @@ def create_app(config: AppConfig) -> FastAPI:
         return await _set_power_state(name, desired)
 
     @app.get("/{name}/power-state")
-    async def power_state(name: str) -> dict[str, str]:
+    async def power_state(
+        name: str,
+        # Auth fallback for GET-only clients; consumed by require_token's
+        # dependency, exposed here only for OpenAPI/Swagger visibility.
+        token: str | None = None,
+    ) -> dict[str, str]:
         device = _get_device(name)
         loop = asyncio.get_running_loop()
         try:

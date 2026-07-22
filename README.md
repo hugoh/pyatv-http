@@ -141,6 +141,15 @@ curl http://localhost:8080/devices \
   -H "Authorization: Bearer $TOKEN"
 
 curl http://localhost:8080/health
+
+# Fallback for clients that can't set an Authorization header (see
+# "Limited HTTP clients" below): token in the query string for GET,
+# token as a JSON body field for POST. Not available for PUT.
+curl "http://localhost:8080/living_room/power-state?token=$TOKEN"
+
+curl -X POST http://localhost:8080/living_room/power-state \
+  -H "Content-Type: application/json" \
+  -d '{"power_state": "on", "token": "'"$TOKEN"'"}'
 ```
 
 `GET`/`PUT`/`POST /<name>/power-state` all return a JSON body:
@@ -172,6 +181,38 @@ FastAPI auto-generates interactive documentation for the running server:
 - `GET /openapi.json` — the raw OpenAPI schema.
 
 These three routes are not themselves behind the bearer-token check.
+
+### Limited HTTP clients (e.g. Hubitat Rule Machine)
+
+A lot of home-automation "rule engine" style integrations — Hubitat's Rule
+Machine is the one that prompted this — can only fire `GET` and `POST`
+requests, and can't attach a custom `Authorization` header to them. Two
+things in this API exist specifically to accommodate that:
+
+1. **`POST` is a full alias for `PUT`** on `/<name>/power-state`. State
+   changes normally belong on `PUT` (it's idempotent and semantically
+   correct — "set this resource to this value"), but any client that can
+   only do `GET`/`POST` can use `POST` with the exact same body and get
+   identical behavior.
+2. **The bearer token can be passed in-band instead of as a header**,
+   as a fallback that's only checked when no valid `Authorization` header
+   is present:
+   - `GET` requests: `?token=...` query parameter.
+   - `POST` requests: `"token"` field in the JSON body, alongside
+     `power_state`.
+
+   This fallback is **deliberately not available on `PUT`** — `PUT` stays
+   the strict, header-only, "do it the correct way" method. If your client
+   can set a custom header, prefer `PUT` with an `Authorization` header;
+   the fallback exists only for clients that genuinely can't.
+
+**Security note:** a token in a URL or a JSON body is more likely to end up
+somewhere you don't want it — server access logs, browser history, an
+intermediate proxy's logs — than one in an `Authorization` header. Only rely
+on this fallback when pyatv-http is reachable exclusively on a trusted local
+network (the normal setup for a Hubitat hub talking to a LAN service, not
+something exposed to the internet), and consider using a token dedicated to
+that integration so it can be rotated on its own if it ever leaks.
 
 ## Notes
 
