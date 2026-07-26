@@ -12,7 +12,7 @@ from pyatv_http.config import AppConfig, DeviceConfig
 VALID_TOKEN = "test-token"
 
 
-def make_config():
+def make_config(*, status_enabled=False, status_history_size=100):
     device = DeviceConfig(
         key="living_room",
         name="Living Room",
@@ -31,6 +31,8 @@ def make_config():
         port=8080,
         devices={"living_room": device, "bedroom": bedroom},
         auth_tokens=frozenset({VALID_TOKEN}),
+        status_enabled=status_enabled,
+        status_history_size=status_history_size,
     )
 
 
@@ -48,6 +50,14 @@ async def client():
 @pytest.fixture
 async def unauthenticated_client():
     app = create_app(make_config())
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+async def status_enabled_client():
+    app = create_app(make_config(status_enabled=True))
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
@@ -187,10 +197,10 @@ async def test_requests_without_token_are_rejected(unauthenticated_client):
     assert response.status_code == 401
 
 
-async def test_devices_without_token_are_rejected(unauthenticated_client):
+async def test_devices_are_public_without_token(unauthenticated_client):
     response = await unauthenticated_client.get("/devices")
 
-    assert response.status_code == 401
+    assert response.status_code == 200
 
 
 async def test_power_state_without_token_are_rejected(unauthenticated_client):
@@ -268,3 +278,103 @@ async def test_put_power_state_does_not_accept_access_token_body_field(
     )
 
     assert response.status_code == 401
+
+
+async def test_status_page_is_404_when_disabled(unauthenticated_client):
+    response = await unauthenticated_client.get("/status")
+
+    assert response.status_code == 404
+
+
+async def test_status_page_available_without_token_when_enabled(
+    status_enabled_client,
+):
+    response = await status_enabled_client.get("/status")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Living Room" in response.text
+    assert "Bedroom" in response.text
+
+
+async def test_status_page_reflects_command_history(status_enabled_client):
+    auth_headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
+
+    with patch(
+        "pyatv_http.app.atv.get_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ):
+        await status_enabled_client.get(
+            "/living_room/power-state", headers=auth_headers
+        )
+
+    with patch(
+        "pyatv_http.app.atv.set_power_state",
+        new=AsyncMock(side_effect=RuntimeError("boom")),
+    ):
+        await status_enabled_client.put(
+            "/living_room/power-state",
+            json={"power_state": "on"},
+            headers=auth_headers,
+        )
+
+    response = await status_enabled_client.get("/status")
+
+    assert response.status_code == 200
+    assert "living_room" in response.text
+    assert "boom" in response.text
+
+
+async def test_stats_endpoint_is_404_when_disabled(unauthenticated_client):
+    response = await unauthenticated_client.get("/stats")
+
+    assert response.status_code == 404
+
+
+async def test_stats_endpoint_available_without_token_when_enabled(
+    status_enabled_client,
+):
+    response = await status_enabled_client.get("/stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["totals"] == {}
+    assert body["global_totals"] == {"success": 0, "error": 0}
+    assert body["recent"] == []
+
+
+async def test_stats_endpoint_reflects_command_history(status_enabled_client):
+    auth_headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
+
+    with patch(
+        "pyatv_http.app.atv.get_power_state",
+        new=AsyncMock(return_value=PowerState.On),
+    ):
+        await status_enabled_client.get(
+            "/living_room/power-state", headers=auth_headers
+        )
+
+    with patch(
+        "pyatv_http.app.atv.set_power_state",
+        new=AsyncMock(side_effect=RuntimeError("boom")),
+    ):
+        await status_enabled_client.put(
+            "/living_room/power-state",
+            json={"power_state": "on"},
+            headers=auth_headers,
+        )
+
+    response = await status_enabled_client.get("/stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["totals"] == {"living_room": {"success": 1, "error": 1}}
+    assert body["global_totals"] == {"success": 1, "error": 1}
+    assert len(body["recent"]) == 2
+
+    latest = body["recent"][0]
+    assert latest["device"] == "living_room"
+    assert latest["command"] == "set_power_state"
+    assert latest["ok"] is False
+    assert latest["detail"] == "boom"
+    assert "timestamp" in latest

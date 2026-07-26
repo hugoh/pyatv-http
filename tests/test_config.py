@@ -208,3 +208,46 @@ address = "10.0.0.5"
 def test_file_not_found_raises(tmp_path):
     with pytest.raises(ConfigError, match="not found"):
         load_config(tmp_path / "missing.toml")
+
+
+def test_missing_status_section_defaults_to_disabled(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text(VALID_CONFIG)
+
+    config = load_config(path)
+
+    assert config.status_enabled is False
+    assert config.status_history_size == 100
+
+
+def test_status_section_enabled(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text(
+        VALID_CONFIG
+        + """
+[status]
+enabled = true
+history_size = 50
+"""
+    )
+
+    config = load_config(path)
+
+    assert config.status_enabled is True
+    assert config.status_history_size == 50
+
+
+def test_status_section_enabled_without_history_size_defaults_to_100(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text(
+        VALID_CONFIG
+        + """
+[status]
+enabled = true
+"""
+    )
+
+    config = load_config(path)
+
+    assert config.status_enabled is True
+    assert config.status_history_size == 100

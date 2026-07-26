@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pyatv-http status</title>
+<style>
+  body { font-family: sans-serif; margin: 2rem; }
+  table { border-collapse: collapse; margin-bottom: 2rem; }
+  th, td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; text-align: left; }
+  .ok { color: green; }
+  .error { color: red; }
+</style>
+</head>
+<body>
+<h1>pyatv-http status</h1>
+<p>Version: {{ version }}</p>
+
+<h2>Devices</h2>
+<table>
+  <tr><th>Key</th><th>Name</th></tr>
+  {% for device in devices %}
+  <tr><td>{{ device.key }}</td><td>{{ device.name }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Command totals</h2>
+<table>
+  <tr><th>Device</th><th>Success</th><th>Error</th></tr>
+  {% for device, counts in totals.items() %}
+  <tr><td>{{ device }}</td><td>{{ counts.success }}</td><td>{{ counts.error }}</td></tr>
+  {% endfor %}
+  <tr><td><strong>Total</strong></td><td>{{ global_totals.success }}</td><td>{{ global_totals.error }}</td></tr>
+</table>
+
+<h2>Recent commands</h2>
+<table>
+  <tr><th>Time</th><th>Device</th><th>Command</th><th>Result</th><th>Detail</th></tr>
+  {% for record in recent %}
+  <tr>
+    <td>{{ record.timestamp.isoformat() }}</td>
+    <td>{{ record.device }}</td>
+    <td>{{ record.command }}</td>
+    <td class="{{ 'ok' if record.ok else 'error' }}">{{ 'ok' if record.ok else 'error' }}</td>
+    <td>{{ record.detail }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</body>
+</html>
