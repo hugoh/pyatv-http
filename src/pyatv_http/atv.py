@@ -26,11 +26,7 @@ class DeviceUnreachableError(Exception):
     """Raised when the Apple TV cannot be found on the network."""
 
 
-def _protocol_settings(
-    device: DeviceConfig,
-) -> dict[
-    str, AirPlaySettings | CompanionSettings | DmapSettings | MrpSettings | RaopSettings
-]:
+def _protocol_settings(device: DeviceConfig) -> ProtocolSettings:
     empty = ProtocolCredential()
     airplay = device.protocols.get("airplay", empty)
     companion = device.protocols.get("companion", empty)
@@ -38,27 +34,27 @@ def _protocol_settings(
     mrp = device.protocols.get("mrp", empty)
     raop = device.protocols.get("raop", empty)
 
-    return {
-        "airplay": AirPlaySettings(
+    return ProtocolSettings(
+        airplay=AirPlaySettings(
             identifier=airplay.identifier,
             credentials=airplay.credentials,
             password=airplay.password,
         ),
-        "companion": CompanionSettings(
+        companion=CompanionSettings(
             identifier=companion.identifier, credentials=companion.credentials
         ),
-        "dmap": DmapSettings(identifier=dmap.identifier, credentials=dmap.credentials),
-        "mrp": MrpSettings(identifier=mrp.identifier, credentials=mrp.credentials),
-        "raop": RaopSettings(
+        dmap=DmapSettings(identifier=dmap.identifier, credentials=dmap.credentials),
+        mrp=MrpSettings(identifier=mrp.identifier, credentials=mrp.credentials),
+        raop=RaopSettings(
             identifier=raop.identifier,
             credentials=raop.credentials,
             password=raop.password,
         ),
-    }
+    )
 
 
 def _build_storage(device: DeviceConfig) -> MemoryStorage:
-    settings = Settings(protocols=ProtocolSettings(**_protocol_settings(device)))
+    settings = Settings(protocols=_protocol_settings(device))
     storage = MemoryStorage()
     storage.storage_model = StorageModel(version=MODEL_VERSION, devices=[settings])
     return storage
