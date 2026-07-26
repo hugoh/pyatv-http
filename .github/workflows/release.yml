@@ -64,3 +64,41 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+
+  publish-docs:
+    needs: release
+    if: needs.release.outputs.new_tag != ''
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ needs.release.outputs.new_tag }}
+
+      - uses: hugoh/gh-workflows/setup@fe2707057b8da8fab2460fc1f0e816561fa8a958 # v1.3.0
+
+      - name: Export OpenAPI schema
+        run: uv run python scripts/export_openapi.py > openapi.json
+
+      - name: Render static API docs
+        run: npx -y @redocly/cli@latest build-docs openapi.json -o public/index.html
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

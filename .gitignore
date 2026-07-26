@@ -40,3 +40,7 @@ config.toml
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated OpenAPI docs (scripts/export_openapi.py, release workflow)
+/openapi.json
+/public/

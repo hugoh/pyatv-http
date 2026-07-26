@@ -224,6 +224,11 @@ FastAPI auto-generates interactive documentation for the running server:
 
 These three routes are not themselves behind the bearer-token check.
 
+A static, always-up-to-date copy of the same schema (rendered with
+[Redoc](https://github.com/Redocly/redoc)) is published on every release to
+[hugoh.github.io/pyatv-http](https://hugoh.github.io/pyatv-http/) — handy for
+browsing the API without a server running.
+
 ### Limited HTTP clients (e.g. Hubitat Rule Machine)
 
 A lot of home-automation "rule engine" style integrations — Hubitat's Rule

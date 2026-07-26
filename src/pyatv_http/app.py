@@ -33,7 +33,19 @@ def create_app(config: AppConfig) -> FastAPI:
     # No app-wide auth dependency: it lives on protected_router below instead,
     # so public routes stay plain FastAPI routes (and so show up in /docs)
     # rather than needing to bypass a global dependency via add_route.
-    app = FastAPI()
+    app = FastAPI(
+        title="pyatv-http",
+        description="HTTP interface for controlling Apple TVs via pyatv",
+        version=__version__,
+        contact={
+            "name": "GitHub repository",
+            "url": "https://github.com/hugoh/pyatv-http",
+        },
+        license_info={
+            "name": "MIT",
+            "url": "https://github.com/hugoh/pyatv-http/blob/main/LICENSE",
+        },
+    )
     public_router = APIRouter()
     protected_router = APIRouter(dependencies=[Depends(require_token(config))])
 
