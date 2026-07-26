@@ -6,6 +6,7 @@ from pathlib import Path
 
 KNOWN_PROTOCOLS = frozenset({"airplay", "companion", "dmap", "mrp", "raop"})
 DEFAULT_PORT = 8080
+DEFAULT_STATUS_HISTORY_SIZE = 100
 
 
 class ConfigError(Exception):
@@ -33,6 +34,8 @@ class AppConfig:
     port: int
     devices: dict[str, DeviceConfig]
     auth_tokens: frozenset[str]
+    status_enabled: bool = False
+    status_history_size: int = DEFAULT_STATUS_HISTORY_SIZE
 
     def get_device(self, key: str) -> DeviceConfig | None:
         return self.devices.get(key)
@@ -91,6 +94,15 @@ def _parse_auth_tokens(data: dict) -> frozenset[str]:
     return frozenset(tokens)
 
 
+def _parse_status(data: dict) -> tuple[bool, int]:
+    raw_status = data.get("status", {})
+    enabled = bool(raw_status.get("enabled", False))
+    history_size = raw_status.get("history_size", DEFAULT_STATUS_HISTORY_SIZE)
+    if not isinstance(history_size, int):
+        raise ConfigError("invalid field 'status.history_size': must be an integer")
+    return enabled, history_size
+
+
 def load_config(path: str | Path) -> AppConfig:
     path = Path(path)
     if not path.is_file():
@@ -111,5 +123,12 @@ def load_config(path: str | Path) -> AppConfig:
     }
 
     auth_tokens = _parse_auth_tokens(data)
+    status_enabled, status_history_size = _parse_status(data)
 
-    return AppConfig(port=port, devices=devices, auth_tokens=auth_tokens)
+    return AppConfig(
+        port=port,
+        devices=devices,
+        auth_tokens=auth_tokens,
+        status_enabled=status_enabled,
+        status_history_size=status_history_size,
+    )
