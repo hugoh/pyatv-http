@@ -3,6 +3,9 @@
 An HTTP interface for controlling Apple TVs, built on top of
 [pyatv](https://github.com/postlund/pyatv).
 
+Please refer to the [API documentation](https://hugoh.github.io/pyatv-http/)
+for the full, up-to-date list of endpoints and schemas.
+
 ## Features
 
 - `GET /<name>/power-state` — reads the current power state without changing it.
