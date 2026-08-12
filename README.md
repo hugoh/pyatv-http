@@ -3,7 +3,7 @@
 An HTTP interface for controlling Apple TVs, built on top of
 [pyatv](https://github.com/postlund/pyatv).
 
-Please refer to the [API documentation](https://hugoh.github.io/pyatv-http/)
+Please refer to the [API documentation](https://pyatv-http.larve.net/)
 for the full, up-to-date list of endpoints and schemas.
 
 ## Features
@@ -229,7 +229,7 @@ These three routes are not themselves behind the bearer-token check.
 
 A static, always-up-to-date copy of the same schema (rendered with
 [Redoc](https://github.com/Redocly/redoc)) is published on every release to
-[hugoh.github.io/pyatv-http](https://hugoh.github.io/pyatv-http/) — handy for
+[pyatv-http.larve.net](https://pyatv-http.larve.net/) — handy for
 browsing the API without a server running.
 
 ### Limited HTTP clients (e.g. Hubitat Rule Machine)
