@@ -57,7 +57,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.release.outputs.new_tag }}
 
-      - uses: hugoh/gh-workflows/setup@fe2707057b8da8fab2460fc1f0e816561fa8a958 # v1.3.0
+      - uses: hugoh/gh-workflows/setup@fc872ebc6ac6bb28fa73a2e83f9f354faad9b5b7 # v1.40.6
 
       - name: Build package
         run: uv build
@@ -83,7 +83,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.release.outputs.new_tag }}
 
-      - uses: hugoh/gh-workflows/setup@fe2707057b8da8fab2460fc1f0e816561fa8a958 # v1.3.0
+      - uses: hugoh/gh-workflows/setup@fc872ebc6ac6bb28fa73a2e83f9f354faad9b5b7 # v1.40.6
 
       - name: Export OpenAPI schema
         run: uv run python scripts/export_openapi.py > openapi.json
