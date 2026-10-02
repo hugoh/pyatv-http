@@ -4,7 +4,7 @@ run = "uv run pytest"
 
 [tools]
 uv = "0.12.19"
-hk = "2.2.0"
+hk = "2.4.0"
 biome = "2.5.4"
 actionlint = "1.7.12"
 pinact = "5.0.0"
