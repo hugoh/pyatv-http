@@ -1,14 +1,18 @@
 ---
 name: semantic-pr
 
-on: # yamllint disable-line rule:truthy
+on:  # yamllint disable-line rule:truthy
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-caller-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   semantic-pr:
-    uses: hugoh/gh-workflows/.github/workflows/semantic-pr.yml@20f042d18e1e5318722f808bafc6d7fc18a838f7 # v1.40.17
+    uses: hugoh/gh-workflows/.github/workflows/semantic-pr.yml@20f042d18e1e5318722f808bafc6d7fc18a838f7  # v1.40.17
     permissions:
       pull-requests: read
