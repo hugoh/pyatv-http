@@ -20,7 +20,7 @@ jobs:
       packages: read
       statuses: write
     steps:
-      - uses: hugoh/gh-workflows/setup@20f042d18e1e5318722f808bafc6d7fc18a838f7  # v1.40.17
+      - uses: hugoh/gh-workflows/setup@12a131c8eca966fe30bcc4ca670fa596b375702f  # v1.40.19
       - run: uv sync
       - run: uv run pytest
-      - uses: hugoh/gh-workflows/hk-check@20f042d18e1e5318722f808bafc6d7fc18a838f7  # v1.40.17
+      - uses: hugoh/gh-workflows/hk-check@12a131c8eca966fe30bcc4ca670fa596b375702f  # v1.40.19
