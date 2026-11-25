@@ -20,10 +20,10 @@ jobs:
       packages: read
       statuses: write
     steps:
-      - uses: hugoh/gh-workflows/setup@ae6e1b2ce64760b5418b71668bb9b0a74a3c4c70  # v1.40.22
+      - uses: hugoh/gh-workflows/setup@8d17bc6b4d7edc0bbec893e0466eb0ba60728721  # v1.40.27
       - run: uv sync
       - run: uv run pytest
-      - uses: hugoh/gh-workflows/hk-check@ae6e1b2ce64760b5418b71668bb9b0a74a3c4c70  # v1.40.22
+      - uses: hugoh/gh-workflows/hk-check@8d17bc6b4d7edc0bbec893e0466eb0ba60728721  # v1.40.27
 
   ci-gate:
     if: always()
@@ -85,7 +85,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.release.outputs.new_tag }}
 
-      - uses: hugoh/gh-workflows/setup@ae6e1b2ce64760b5418b71668bb9b0a74a3c4c70  # v1.40.22
+      - uses: hugoh/gh-workflows/setup@8d17bc6b4d7edc0bbec893e0466eb0ba60728721  # v1.40.27
 
       - name: Build package
         run: uv build
@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.release.outputs.new_tag }}
 
-      - uses: hugoh/gh-workflows/setup@ae6e1b2ce64760b5418b71668bb9b0a74a3c4c70  # v1.40.22
+      - uses: hugoh/gh-workflows/setup@8d17bc6b4d7edc0bbec893e0466eb0ba60728721  # v1.40.27
 
       - name: Export OpenAPI schema
         run: uv run python scripts/export_openapi.py > openapi.json
